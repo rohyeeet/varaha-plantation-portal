@@ -78,7 +78,7 @@ MODELS = [
      "sp":[
         {"name":"Red Sanders","col":"#C0392B","spacing":"3 m","perHa":130,"role":"boundary","sal":3},
         {"name":"Mango","col":"#E8940A","spacing":"6×6 m","perHa":184,"role":"block-a","sx":6,"sy":6,"aw":3},
-        {"name":"Coconut","col":"#2E86C1","spacing":"9×5 m","perHa":42.22,"role":"alley","sx":9,"sy":5},
+        {"name":"Coconut","col":"#2E86C1","spacing":"9×5 m","perHa":42.22,"role":"alley","sx":5,"sy":9},
      ]},
     {"id":2,"name":"Model 2","sub":"Mango · Red Sanders · Coconut (Long-edge)",
      "type":"Boundary + Alley Block","size":">0.8 ha","credit":7.508,"totalPerHa":356.22,
@@ -86,7 +86,7 @@ MODELS = [
      "sp":[
         {"name":"Red Sanders","col":"#C0392B","spacing":"3 m","perHa":130,"role":"boundary","sal":3},
         {"name":"Mango","col":"#E8940A","spacing":"6×6 m","perHa":184,"role":"block-a","sx":6,"sy":6,"aw":3},
-        {"name":"Coconut","col":"#2E86C1","spacing":"9×5 m","perHa":42.22,"role":"alley-long","sx":9,"sy":5},
+        {"name":"Coconut","col":"#2E86C1","spacing":"9×5 m","perHa":42.22,"role":"alley-long","sx":5,"sy":9},
      ]},
     {"id":3,"name":"Model 3","sub":"Mango · Cashew · Teak",
      "type":"Boundary + Equal Block","size":"≤0.8 ha","credit":5.809,"totalPerHa":365.11,
@@ -138,17 +138,17 @@ MODELS = [
      ]},
     {"id":9,"name":"Model 9","sub":"Jackfruit · Sapota · Jamun",
      "type":"Three-Zone Block","size":">0.8 ha","credit":7.424,"totalPerHa":352.8,
-     "desc":"No boundary. Three vertical zones: Jackfruit 45% at 5×5 m, Sapota 28% at 6×6 m, Jamun 27% at 5×5 m.",
+     "desc":"No boundary. Three vertical zones: Jackfruit 40% at 5×5 m, Sapota 36% at 6×6 m, Jamun 24% at 5×5 m.",
      "sp":[
-        {"name":"Jackfruit","col":"#1E8449","spacing":"5×5 m","perHa":158.4,"role":"zone","sx":5,"sy":5,"zs":.449},
-        {"name":"Sapota","col":"#8E44AD","spacing":"6×6 m","perHa":100,"role":"zone","sx":6,"sy":6,"zs":.283},
-        {"name":"Jamun","col":"#6C3483","spacing":"5×5 m","perHa":94.4,"role":"zone","sx":5,"sy":5,"zs":.268},
+        {"name":"Jackfruit","col":"#1E8449","spacing":"5×5 m","perHa":158.4,"role":"zone","sx":5,"sy":5,"zs":.399},
+        {"name":"Sapota","col":"#8E44AD","spacing":"6×6 m","perHa":100,"role":"zone","sx":6,"sy":6,"zs":.363},
+        {"name":"Jamun","col":"#6C3483","spacing":"5×5 m","perHa":94.4,"role":"zone","sx":5,"sy":5,"zs":.238},
      ]},
     {"id":10,"name":"Model 10","sub":"Coconut · Jackfruit · Jamun",
      "type":"Coconut Edge + 3:1 Block","size":">0.8 ha","credit":7.424,"totalPerHa":354.62,
      "desc":"Coconut top/bottom alley rows at 9×5 m. Jackfruit 3:1 over Jamun fills block at 5×5 m.",
      "sp":[
-        {"name":"Coconut","col":"#2E86C1","spacing":"9×5 m","perHa":41.78,"role":"alley","sx":9,"sy":5},
+        {"name":"Coconut","col":"#2E86C1","spacing":"9×5 m","perHa":41.78,"role":"alley","sx":5,"sy":9},
         {"name":"Jackfruit","col":"#1E8449","spacing":"5×5 m","perHa":218.04,"role":"block-a","sx":5,"sy":5,"aw":3},
         {"name":"Jamun","col":"#6C3483","spacing":"5×5 m","perHa":94.8,"role":"block-b","sx":5,"sy":5,"aw":1},
      ]},
@@ -156,23 +156,23 @@ MODELS = [
      "type":"Coconut Edge + 2:1 Block","size":">0.8 ha","credit":7.424,"totalPerHa":354.62,
      "desc":"Coconut top/bottom alley rows at 9×5 m. Jackfruit 2:1 over Sapota fills block at 5×5 m.",
      "sp":[
-        {"name":"Coconut","col":"#2E86C1","spacing":"9×5 m","perHa":41.78,"role":"alley","sx":9,"sy":5},
+        {"name":"Coconut","col":"#2E86C1","spacing":"9×5 m","perHa":41.78,"role":"alley","sx":5,"sy":9},
         {"name":"Jackfruit","col":"#1E8449","spacing":"5×5 m","perHa":208.56,"role":"block-a","sx":5,"sy":5,"aw":2},
         {"name":"Sapota","col":"#8E44AD","spacing":"5×5 m","perHa":104.28,"role":"block-b","sx":5,"sy":5,"aw":1},
      ]},
     {"id":12,"name":"Model 12","sub":"Mango · Jackfruit · Jamun",
      "type":"Three-Zone Block","size":">0.8 ha","credit":7.029,"totalPerHa":352.8,
-     "desc":"No boundary. Three vertical zones: Jackfruit 45% at 5×5 m, Mango 28% at 6×6 m, Jamun 27% at 5×5 m.",
+     "desc":"No boundary. Three vertical zones: Jackfruit 40% at 5×5 m, Mango 36% at 6×6 m, Jamun 24% at 5×5 m.",
      "sp":[
-        {"name":"Jackfruit","col":"#1E8449","spacing":"5×5 m","perHa":158.4,"role":"zone","sx":5,"sy":5,"zs":.449},
-        {"name":"Mango","col":"#E8940A","spacing":"6×6 m","perHa":100,"role":"zone","sx":6,"sy":6,"zs":.283},
-        {"name":"Jamun","col":"#6C3483","spacing":"5×5 m","perHa":94.4,"role":"zone","sx":5,"sy":5,"zs":.268},
+        {"name":"Jackfruit","col":"#1E8449","spacing":"5×5 m","perHa":158.4,"role":"zone","sx":5,"sy":5,"zs":.399},
+        {"name":"Mango","col":"#E8940A","spacing":"6×6 m","perHa":100,"role":"zone","sx":6,"sy":6,"zs":.363},
+        {"name":"Jamun","col":"#6C3483","spacing":"5×5 m","perHa":94.4,"role":"zone","sx":5,"sy":5,"zs":.238},
      ]},
     {"id":13,"name":"Model 13","sub":"Coconut · Jackfruit · Citrus",
      "type":"Coconut Edge + Equal Block","size":">0.8 ha","credit":7.424,"totalPerHa":335.91,
      "desc":"Coconut along three sides at 9×5 m. Jackfruit and Citrus in equal 50/50 rows at 5×5 m.",
      "sp":[
-        {"name":"Coconut","col":"#2E86C1","spacing":"9×5 m","perHa":62.67,"role":"alley-3","sx":9,"sy":5},
+        {"name":"Coconut","col":"#2E86C1","spacing":"9×5 m","perHa":62.67,"role":"alley-3","sx":5,"sy":9},
         {"name":"Jackfruit","col":"#1E8449","spacing":"5×5 m","perHa":136.62,"role":"block-a","sx":5,"sy":5,"aw":1},
         {"name":"Citrus","col":"#5D8A00","spacing":"5×5 m","perHa":136.62,"role":"block-b","sx":5,"sy":5,"aw":1},
      ]},
@@ -373,9 +373,9 @@ def _bresenham_b(R, wa, wb):
 def compute_groups(kyaari: dict, model: dict):
     poly    = kyaari['polygon']
     area_ha = kyaari.get('area_ha') or (_area(poly)/10000)
-    inner   = _safe_inset(poly,1)
-    has_zones = any(s['role']=='zone' for s in model['sp'])
-    block   = inner if has_zones else _safe_inset(poly,5)
+    inner        = _safe_inset(poly,1)
+    has_boundary = any(s['role']=='boundary' for s in model['sp'])
+    block        = _safe_inset(poly,5) if has_boundary else inner
     bb      = _bbox(block)
     groups  = [{'sp':s,'pts':[]} for s in model['sp']]
 
@@ -383,6 +383,7 @@ def compute_groups(kyaari: dict, model: dict):
         if s['role']=='boundary':
             groups[i]['pts']=_walk_boundary_targeted(inner,round(area_ha*s['perHa']))
 
+    has_zones = any(s['role']=='zone' for s in model['sp'])
     if has_zones:
         W=bb['x1']-bb['x0']; xc=bb['x0']
         for s in model['sp']:
