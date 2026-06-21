@@ -2,6 +2,7 @@ import streamlit as st
 import folium
 from streamlit_folium import st_folium
 import math
+import xml.etree.ElementTree as ET
 from shapely.geometry import Polygon as SPoly, Point as SPt, MultiPolygon
 
 st.set_page_config(
@@ -18,90 +19,62 @@ footer{display:none}
 .stApp,[data-testid="stAppViewContainer"]{background:#F4F5F0}
 .block-container{padding:0 0 2rem!important;max-width:960px!important;margin:0 auto}
 
-/* Header */
-.portal-header{
-  display:flex;align-items:baseline;gap:10px;
-  padding:18px 0 10px;border-bottom:1px solid #D8DDD0;margin-bottom:14px
-}
+.portal-header{display:flex;align-items:baseline;gap:10px;
+  padding:18px 0 10px;border-bottom:1px solid #D8DDD0;margin-bottom:12px}
 .portal-brand{font-size:11px;font-weight:800;letter-spacing:.15em;
   color:#2D7A1A;text-transform:uppercase}
 .portal-title{font-size:20px;font-weight:800;color:#0F2218;margin:0}
 
-/* Selector labels */
 .sel-label{font-size:10px;font-weight:700;letter-spacing:.1em;
   text-transform:uppercase;color:#7A8E78;margin-bottom:3px}
-.stSelectbox label{display:none!important}
+.stSelectbox label,.stTextInput label{display:none!important}
 .stSelectbox [data-baseweb="select"]{border-radius:8px!important}
+.stTextInput input{border-radius:8px!important;border:1.5px solid #D0D8C8!important;
+  font-size:13px!important;padding:8px 12px!important}
+.stTextInput input:focus{border-color:#2D7A1A!important;box-shadow:0 0 0 2px #2D7A1A22!important}
 
-/* Species card */
+.tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;
+  border-radius:4px;padding:2px 7px;margin-right:4px}
+.tag-green{background:#E0F0DA;color:#1A5A1A}
+.tag-red{background:#FDE8E8;color:#8B1A1A}
+.tag-amber{background:#FDF3DC;color:#7A4A00}
+.tag-grey{background:#EAEAEA;color:#666}
+
 .sp-card{background:#fff;border-radius:10px;padding:14px 16px;
   border-top:4px solid var(--c);box-shadow:0 1px 3px rgba(0,0,0,.07)}
 .sp-card-name{font-size:11px;font-weight:700;color:#4A6A48;margin-bottom:2px}
 .sp-card-num{font-size:34px;font-weight:900;color:#0F2218;line-height:1}
 .sp-card-sub{font-size:10px;color:#9AA898;margin-top:3px}
 
-/* Total card */
 .total-card{background:#0F2218;border-radius:10px;padding:14px 16px;
-  display:flex;flex-direction:column;justify-content:space-between;
   box-shadow:0 1px 3px rgba(0,0,0,.15)}
 .total-card-label{font-size:10px;font-weight:700;letter-spacing:.08em;
   color:#6DB87A;text-transform:uppercase}
 .total-card-num{font-size:34px;font-weight:900;color:#fff;line-height:1;margin-top:4px}
 .total-card-sub{font-size:10px;color:#4A7A54;margin-top:3px}
 
-/* Info row */
 .info-card{background:#fff;border-radius:10px;padding:14px 16px;
-  box-shadow:0 1px 3px rgba(0,0,0,.07)}
+  box-shadow:0 1px 3px rgba(0,0,0,.07);height:100%}
 .info-label{font-size:10px;font-weight:700;letter-spacing:.1em;
   text-transform:uppercase;color:#7A8E78;margin-bottom:8px}
-.info-row{font-size:13px;color:#2A3A28;line-height:1.8}
+.info-row{font-size:13px;color:#2A3A28;line-height:1.9}
 .info-row b{color:#0F2218}
-
 .credit-big{font-size:28px;font-weight:900;color:#1A5A1A}
 .credit-unit{font-size:11px;color:#4A7A4A;font-weight:600}
 .credit-meta{font-size:12px;color:#5A8A58;margin-top:6px;line-height:1.7}
-
-/* Model desc */
 .model-desc{font-size:12px;color:#5A6E58;background:#EEF2EA;border-radius:8px;
   padding:10px 14px;margin-top:10px;line-height:1.6}
 .model-desc b{color:#2A4A28}
+.no-kyaari{text-align:center;padding:40px;color:#7A8E78;font-size:14px}
 </style>
 """, unsafe_allow_html=True)
 
-# ─── DATA ────────────────────────────────────────────────────────
-
-KYAARIS = [
-    {"id":"K001","label":"K001 — Nandyal Block A","farmer":"Rajan Kumar",
-     "dist":"Nandyal, AP","shape":"Rectangle",
-     "anchor":(15.4780,78.4840),
-     "polygon":[[0,0],[100,0],[100,50],[0,50]],
-     "farmPoly":[[-18,-18],[118,-18],[118,68],[-18,68]]},
-    {"id":"K002","label":"K002 — Kurnool Block C","farmer":"Suresh Reddy",
-     "dist":"Kurnool, AP","shape":"Irregular Quad",
-     "anchor":(15.8200,78.0350),
-     "polygon":[[0,0],[120,10],[110,80],[-10,70]],
-     "farmPoly":[[-24,-18],[144,5],[130,100],[-26,90]]},
-    {"id":"K003","label":"K003 — Chittoor Block B","farmer":"Lakshmi Devi",
-     "dist":"Chittoor, AP","shape":"Triangle",
-     "anchor":(13.2150,79.1000),
-     "polygon":[[0,0],[120,0],[60,80]],
-     "farmPoly":[[-16,-16],[136,-16],[78,100],[-16,100]]},
-    {"id":"K004","label":"K004 — Prakasam Block A","farmer":"Venkat Rao",
-     "dist":"Prakasam, AP","shape":"Pentagon",
-     "anchor":(15.3400,79.5500),
-     "polygon":[[20,0],[130,0],[150,60],[80,100],[0,60]],
-     "farmPoly":[[5,-18],[145,-18],[170,70],[82,122],[-16,70]]},
-    {"id":"K005","label":"K005 — Nellore Block D","farmer":"Bala Krishna",
-     "dist":"Nellore, AP","shape":"Hexagon",
-     "anchor":(14.4450,79.9860),
-     "polygon":[[0,20],[30,0],[150,0],[160,30],[140,110],[10,100]],
-     "farmPoly":[[-16,8],[18,-18],[165,-18],[180,26],[156,128],[-2,122]]},
-]
+# ─── MODELS ──────────────────────────────────────────────────────
 
 MODELS = [
     {"id":1,"name":"Model 1","sub":"Mango · Red Sanders · Coconut",
      "type":"Boundary + Alley Block","size":">0.8 ha","credit":6.744,"totalPerHa":356.22,
-     "desc":"Red Sanders boundary at 3 m. Mango fills block at 6×6 m. Coconut in top/bottom alley rows at 9×5 m.",
+     "desc":"Red Sanders boundary at 3 m. Mango block at 6×6 m. Coconut top/bottom alley at 9×5 m.",
      "sp":[
         {"name":"Red Sanders","col":"#C0392B","spacing":"3 m","perHa":130,"role":"boundary","sal":3},
         {"name":"Mango","col":"#E8940A","spacing":"6×6 m","perHa":184,"role":"block-a","sx":6,"sy":6,"aw":3},
@@ -205,7 +178,109 @@ MODELS = [
      ]},
 ]
 
-# ─── GIS ENGINE ──────────────────────────────────────────────────
+# ─── SPECIES → MODEL MAPPING ──────────────────────────────────────
+
+# Map normalised species sets from KML to best-matching model index in MODELS list
+_SPECIES_MODEL = {
+    frozenset(['COCONUT','MANGO','RED_SANDERS']):     0,   # M1
+    frozenset(['MANGO','RED_SANDERS','SAPOTA']):       4,   # M5
+    frozenset(['CITRUS','COCONUT','JACKFRUIT']):      12,   # M13
+    frozenset(['MANGO','SAPOTA','TEAK']):              5,   # M6
+    frozenset(['JAMUN','MANGO','RED_SANDERS']):        7,   # M8
+    frozenset(['JAMUN','MANGO','TEAK']):               6,   # M7
+    frozenset(['JACKFRUIT','JAMUN','MANGO']):         11,   # M12
+    frozenset(['COCONUT','JACKFRUIT','JAMUN']):        9,   # M10
+    frozenset(['COCONUT','JACKFRUIT','SAPOTA']):      10,   # M11
+    frozenset(['CASHEW','MANGO','TEAK']):              3,   # M4
+    frozenset(['JACKFRUIT','JAMUN','SAPOTA']):         8,   # M9
+    frozenset(['CASHEW','MANGO']):                     2,   # M3 fallback
+}
+
+def _suggest_model(species_str: str) -> int:
+    if not species_str: return 0
+    sp = frozenset(s.strip().upper() for s in species_str.split(',') if s.strip())
+    return _SPECIES_MODEL.get(sp, 0)
+
+# ─── KML LOADER ───────────────────────────────────────────────────
+
+def _ll2m(lng: float, lat: float, anchor_lat: float, anchor_lng: float):
+    """Real lat/lng → relative [x, y] metres from anchor."""
+    x = (lng - anchor_lng) * 111320 * math.cos(math.radians(anchor_lat))
+    y = (anchor_lat - lat) * 111320
+    return [x, y]
+
+@st.cache_resource(show_spinner="Loading kyaari data…")
+def load_kyaaris(kml_path: str):
+    ns = {'kml': 'http://www.opengis.net/kml/2.2'}
+    tree = ET.parse(kml_path)
+    root = tree.getroot()
+    kyaaris = []
+    kyaari_by_id = {}
+
+    for pm in root.findall('.//kml:Placemark', ns):
+        try:
+            kyaari_id = pm.find('kml:name', ns).text.strip()
+            data = {}
+            for d in pm.findall('.//kml:Data', ns):
+                v = d.find('kml:value', ns)
+                data[d.get('name')] = (v.text or '').strip()
+
+            # Parse coordinates (KML: lng,lat,alt)
+            raw = pm.find('.//kml:coordinates', ns).text.strip().split()
+            ll_pts = []
+            for c in raw:
+                parts = c.split(',')
+                ll_pts.append((float(parts[0]), float(parts[1])))
+
+            # Remove closing duplicate point
+            if len(ll_pts) > 1 and ll_pts[0] == ll_pts[-1]:
+                ll_pts = ll_pts[:-1]
+            if len(ll_pts) < 3:
+                continue
+
+            # Anchor = mean lat/lng of vertices
+            anchor_lat = sum(lat for _, lat in ll_pts) / len(ll_pts)
+            anchor_lng = sum(lng for lng, _ in ll_pts) / len(ll_pts)
+
+            # Convert to relative metres
+            polygon_m = [_ll2m(lng, lat, anchor_lat, anchor_lng) for lng, lat in ll_pts]
+
+            species_str  = data.get('Sapling Specie Names', '')
+            farmer       = data.get('Farmer Name', '').strip().title()
+            district     = data.get('District', '')
+            state        = data.get('State', '')
+            village      = data.get('Village', '').strip().title()
+
+            try: area_ha = float(data.get('Total Area') or 0)
+            except: area_ha = 0.0
+
+            k = {
+                'id':           kyaari_id,
+                'label':        f"{kyaari_id} · {farmer}",
+                'farmer':       farmer,
+                'dist':         f"{district}, {state}",
+                'village':      village,
+                'shape':        'Polygon',
+                'area_ha':      area_ha,
+                'anchor':       (anchor_lat, anchor_lng),
+                'polygon':      polygon_m,
+                'species_str':  species_str,
+                'model_type':   data.get('Plantation Model', ''),
+                'rs_status':    data.get('RS Status', ''),
+                'verif_status': data.get('Verification Status', ''),
+                'surveyor':     data.get('Surveyor Name', ''),
+                'org':          data.get('Organisation', ''),
+                'total_plants': int(data.get('Total Number of Plants') or 0),
+                'default_m':    _suggest_model(species_str),
+            }
+            kyaaris.append(k)
+            kyaari_by_id[kyaari_id] = k
+        except Exception:
+            continue
+
+    return kyaaris, kyaari_by_id
+
+# ─── GIS ENGINE ───────────────────────────────────────────────────
 
 def _shapely(coords):
     p = SPoly([(c[0], c[1]) for c in coords])
@@ -229,7 +304,7 @@ def _pip(pt, coords):
 
 def _bbox(coords):
     xs=[c[0] for c in coords]; ys=[c[1] for c in coords]
-    return dict(x0=min(xs), x1=max(xs), y0=min(ys), y1=max(ys))
+    return dict(x0=min(xs),x1=max(xs),y0=min(ys),y1=max(ys))
 
 def _dist(a, b):
     return math.sqrt((b[0]-a[0])**2+(b[1]-a[1])**2)
@@ -243,7 +318,7 @@ def _walk_boundary(coords, spacing):
         dx,dy=(p2[0]-p1[0])/el,(p2[1]-p1[1])/el; ep=0
         while ep+(nxt-cum)<=el+1e-9:
             ep+=nxt-cum; cum=nxt; nxt+=spacing
-            pts.append([p1[0]+dx*ep, p1[1]+dy*ep])
+            pts.append([p1[0]+dx*ep,p1[1]+dy*ep])
         cum+=el-ep
     return pts
 
@@ -255,79 +330,59 @@ def _in_bands(v, bands):
     return any(lo<=v<=hi for lo,hi in bands)
 
 def _place_alley(block, sx, sy, role, bb, target):
-    """
-    Place alley trees and return (pts, y_exclusion_bands, x_exclusion_bands).
-    y_bands: row y-ranges blocked for block-a/b species (alley / alley-3)
-    x_bands: col x-ranges blocked for block-a/b species (alley-long)
-    """
     pts=[]; y_bands=[]; x_bands=[]
     W=bb['x1']-bb['x0']; H=bb['y1']-bb['y0']
-    is_long = (role=='alley-long') or (W < H)
+    is_long=(role=='alley-long') or (W<H)
 
     if is_long:
-        # Alley columns run along left and right long edges (walk in y)
-        col_spacing = sy   # distance between adjacent alley column centres
-        tpr = max(1, int(H/sx))              # trees per column (walk in y at sx)
-        base = max(1, round(target/(2*tpr)))
-        npairs = base
-        for p in range(npairs):
-            x0=bb['x0']+col_spacing/2+p*col_spacing
-            x1=bb['x1']-col_spacing/2-p*col_spacing
+        tpr=max(1,int(H/sx))
+        base=max(1,round(target/(2*tpr)))
+        for p in range(base):
+            x0=bb['x0']+sy/2+p*sy; x1=bb['x1']-sy/2-p*sy
             if x0>=x1: break
-            # Exclusion bands in x (half a spacing either side of the column centre)
-            x_bands.append([x0-col_spacing/2, x0+col_spacing/2])
-            if abs(x1-x0)>col_spacing:
-                x_bands.append([x1-col_spacing/2, x1+col_spacing/2])
+            x_bands.append([x0-sy/2,x0+sy/2])
+            if abs(x1-x0)>sy: x_bands.append([x1-sy/2,x1+sy/2])
             y=bb['y0']+sx/2
             while y<=bb['y1']:
                 if _pip([x0,y],block): pts.append([x0,y])
-                if abs(x1-x0)>col_spacing and _pip([x1,y],block): pts.append([x1,y])
+                if abs(x1-x0)>sy and _pip([x1,y],block): pts.append([x1,y])
                 y+=sx
     else:
-        # Alley rows run along top and bottom (walk in x)
-        row_spacing = sy   # distance between adjacent alley row centres
-        tpr = max(1, int(W/sx))
-        base = max(1, round(target/(2*tpr)))
-        npairs = max(3, base) if role=='alley-3' else base
+        tpr=max(1,int(W/sx))
+        base=max(1,round(target/(2*tpr)))
+        npairs=max(3,base) if role=='alley-3' else base
         for p in range(npairs):
-            y0=bb['y0']+row_spacing/2+p*row_spacing
-            y1=bb['y1']-row_spacing/2-p*row_spacing
+            y0=bb['y0']+sy/2+p*sy; y1=bb['y1']-sy/2-p*sy
             if y0>=y1: break
-            y_bands.append([y0-row_spacing/2, y0+row_spacing/2])
-            if y1-y0>row_spacing:
-                y_bands.append([y1-row_spacing/2, y1+row_spacing/2])
+            y_bands.append([y0-sy/2,y0+sy/2])
+            if y1-y0>sy: y_bands.append([y1-sy/2,y1+sy/2])
             x=bb['x0']+sx/2
             while x<=bb['x1']:
                 if _pip([x,y0],block): pts.append([x,y0])
-                if y1-y0>row_spacing and _pip([x,y1],block): pts.append([x,y1])
+                if y1-y0>sy and _pip([x,y1],block): pts.append([x,y1])
                 x+=sx
-
-    return pts, y_bands, x_bands
+    return pts,y_bands,x_bands
 
 def _bresenham_b(R, wa, wb):
-    """Row indices assigned to species B, evenly distributed."""
     if wb==0 or R==0: return set()
-    nB=max(0, R-round(R*wa/(wa+wb)))
+    nB=max(0,R-round(R*wa/(wa+wb)))
     if nB==0: return set()
     step=R/nB
     return {int(k*step+step/2) for k in range(nB)}
 
-def compute_groups(k_idx, m_idx):
-    kyaari=KYAARIS[k_idx]; model=MODELS[m_idx]
-    poly=kyaari['polygon']
-    area_ha=_area(poly)/10000
-    inner=_safe_inset(poly,1)
-    has_zones=any(s['role']=='zone' for s in model['sp'])
-    block=inner if has_zones else _safe_inset(poly,5)
-    bb=_bbox(block)
-    groups=[{'sp':s,'pts':[]} for s in model['sp']]
+def compute_groups(kyaari: dict, model: dict):
+    poly    = kyaari['polygon']
+    area_ha = kyaari.get('area_ha') or (_area(poly)/10000)
+    inner   = _safe_inset(poly,1)
+    has_zones = any(s['role']=='zone' for s in model['sp'])
+    block   = inner if has_zones else _safe_inset(poly,5)
+    bb      = _bbox(block)
+    groups  = [{'sp':s,'pts':[]} for s in model['sp']]
 
-    # ── Boundary ──────────────────────────────────────────────────
     for i,s in enumerate(model['sp']):
         if s['role']=='boundary':
-            groups[i]['pts']=_walk_boundary_targeted(inner, round(area_ha*s['perHa']))
+            groups[i]['pts']=_walk_boundary_targeted(inner,round(area_ha*s['perHa']))
 
-    # ── Zone models (M9, M12) ─────────────────────────────────────
     if has_zones:
         W=bb['x1']-bb['x0']; xc=bb['x0']
         for s in model['sp']:
@@ -338,50 +393,41 @@ def compute_groups(k_idx, m_idx):
             while y<=bb['y1']:
                 x=bb['x0']+s['sx']/2
                 while x<=bb['x1']:
-                    if xc-1e-6<=x<xe-1e-6 and _pip([x,y],block):
-                        pts.append([x,y])
+                    if xc-1e-6<=x<xe-1e-6 and _pip([x,y],block): pts.append([x,y])
                     x+=s['sx']
                 y+=s['sy']
             groups[i]['pts']=pts; xc=xe
         return groups
 
-    # ── Alley rows/columns ────────────────────────────────────────
     y_bands=[]; x_bands=[]
     for s in model['sp']:
         if not s['role'].startswith('alley'): continue
         i=model['sp'].index(s)
-        tc=round(area_ha*s['perHa'])
-        pts,yb,xb=_place_alley(block,s['sx'],s['sy'],s['role'],bb,tc)
+        pts,yb,xb=_place_alley(block,s['sx'],s['sy'],s['role'],bb,round(area_ha*s['perHa']))
         groups[i]['pts']=pts; y_bands.extend(yb); x_bands.extend(xb)
 
-    # ── Block grid (no overlap with alley bands) ──────────────────
     sa=next((s for s in model['sp'] if s['role']=='block-a'),None)
     sb=next((s for s in model['sp'] if s['role']=='block-b'),None)
     if sa:
         ia=model['sp'].index(sa); ib=model['sp'].index(sb) if sb else -1
         wa=sa.get('aw',1); wb=sb.get('aw',1) if sb else 0
         sx,sy=sa['sx'],sa['sy']
-
-        # Collect rows not occupied by y-band alley rows
         all_y=[]
         y=bb['y0']+sy/2
         while y<=bb['y1']:
             if not _in_bands(y,y_bands): all_y.append(y)
             y+=sy
-
         b_rows=_bresenham_b(len(all_y),wa,wb)
         for ri,row_y in enumerate(all_y):
             ti=ib if (ri in b_rows and ib>=0) else ia
             x=bb['x0']+sx/2
             while x<=bb['x1']:
-                # Skip x positions occupied by alley-long columns
                 if not _in_bands(x,x_bands) and _pip([x,row_y],block):
                     groups[ti]['pts'].append([x,row_y])
                 x+=sx
-
     return groups
 
-# ─── GEO UTILS ───────────────────────────────────────────────────
+# ─── GEO UTILS ────────────────────────────────────────────────────
 
 def _m2ll(pt, anchor):
     x,y=pt; lat0,lng0=anchor
@@ -390,31 +436,33 @@ def _m2ll(pt, anchor):
 def _poly2ll(coords, anchor):
     return [_m2ll(c,anchor) for c in coords]
 
-# ─── MAP ─────────────────────────────────────────────────────────
+# ─── MAP ──────────────────────────────────────────────────────────
 
 GMAPS_KEY = st.secrets.get("GMAPS_KEY", "")
 
-def build_map(k_idx, m_idx, groups):
-    kyaari=KYAARIS[k_idx]; model=MODELS[m_idx]
-    anchor=kyaari['anchor']
-    center=_m2ll(_centroid(kyaari['polygon']),anchor)
+def build_map(kyaari: dict, model: dict, groups: list):
+    anchor = kyaari['anchor']
+    cen    = _centroid(kyaari['polygon'])
+    center = _m2ll(cen, anchor)
 
-    fm=folium.Map(location=center,zoom_start=18,tiles=None,prefer_canvas=True)
+    fm = folium.Map(location=center, zoom_start=18, tiles=None, prefer_canvas=True)
+
+    tile_url = (
+        f"https://mt1.google.com/vt/lyrs=s&x={{x}}&y={{y}}&z={{z}}&key={GMAPS_KEY}"
+        if GMAPS_KEY else
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+    )
     folium.TileLayer(
-        tiles=f"https://mt1.google.com/vt/lyrs=s&x={{x}}&y={{y}}&z={{z}}&key={GMAPS_KEY}",
-        attr="Google Maps",name="Satellite",max_zoom=21,max_native_zoom=20,
+        tiles=tile_url,
+        attr="Google Maps" if GMAPS_KEY else "Esri World Imagery",
+        name="Satellite", max_zoom=21, max_native_zoom=20,
     ).add_to(fm)
 
-    # Farm outer boundary
+    # Kyaari polygon
     folium.Polygon(
-        locations=_poly2ll(kyaari['farmPoly'],anchor),
-        color='#C8A050',weight=1.5,fill=False,dash_array='10,6',opacity=0.6,
-    ).add_to(fm)
-
-    # Kyaari boundary
-    folium.Polygon(
-        locations=_poly2ll(kyaari['polygon'],anchor),
-        color='#27AE60',weight=2.5,fill=True,fill_color='#27AE60',fill_opacity=0.05,
+        locations=_poly2ll(kyaari['polygon'], anchor),
+        color='#27AE60', weight=2.5, fill=True,
+        fill_color='#27AE60', fill_opacity=0.06,
     ).add_to(fm)
 
     # Zone dividers (M9, M12)
@@ -425,7 +473,7 @@ def build_map(k_idx, m_idx, groups):
             xc+=W*s['zs']
             folium.PolyLine(
                 [_m2ll([xc,bb2['y0']],anchor),_m2ll([xc,bb2['y1']],anchor)],
-                color='white',weight=1.5,dash_array='5,4',opacity=0.65,
+                color='white',weight=1.5,dash_array='6,4',opacity=0.65,
             ).add_to(fm)
 
     # Boundary guide rings
@@ -445,64 +493,99 @@ def build_map(k_idx, m_idx, groups):
         sp=g['sp']; r=RADII.get(sp['role'],1.2)
         for pt in g['pts']:
             folium.Circle(
-                location=_m2ll(pt,anchor),radius=r,
-                color='rgba(255,255,255,0.4)',weight=0.5,
-                fill=True,fill_color=sp['col'],fill_opacity=0.9,
+                location=_m2ll(pt,anchor), radius=r,
+                color='rgba(255,255,255,0.4)', weight=0.5,
+                fill=True, fill_color=sp['col'], fill_opacity=0.9,
                 tooltip=f"{sp['name']} · {sp['spacing']}",
             ).add_to(fm)
     return fm
 
-# ─── CACHED COMPUTE ──────────────────────────────────────────────
+# ─── CACHED COMPUTE ───────────────────────────────────────────────
 
-@st.cache_data(show_spinner="Computing…")
-def _cached_groups(k_idx, m_idx):
-    return compute_groups(k_idx, m_idx)
+@st.cache_data(show_spinner="Computing tree positions…")
+def _cached_groups(kyaari_id: str, model_id: int, _kyaari: dict):
+    model = next(m for m in MODELS if m['id']==model_id)
+    return compute_groups(_kyaari, model)
 
 ROLE_LABEL={
     'boundary':'Boundary','alley':'Alley rows','alley-long':'Alley cols',
     'alley-3':'3-side alley','block-a':'Block','block-b':'Block','zone':'Zone',
 }
 
-# ─── UI ──────────────────────────────────────────────────────────
+STATUS_STYLE = {
+    'ACCEPTED': 'tag-green', 'PENDING': 'tag-amber',
+    'REJECTED': 'tag-red',   'None': 'tag-grey', '': 'tag-grey',
+}
 
-# Header
+# ─── LOAD DATA ────────────────────────────────────────────────────
+
+KYAARIS_ALL, KYAARI_BY_ID = load_kyaaris('kyaaris.kml')
+
+# ─── UI ───────────────────────────────────────────────────────────
+
 st.markdown("""
 <div class="portal-header">
   <span class="portal-brand">Varaha</span>
   <span class="portal-title">Plantation Portal</span>
-</div>
-""", unsafe_allow_html=True)
+</div>""", unsafe_allow_html=True)
 
-# Selectors row
-sc1, sc2 = st.columns([1,2], gap="medium")
+# ── SEARCH + SELECTORS ────────────────────────────────────────────
+sc1, sc2, sc3 = st.columns([1, 2, 2], gap="small")
+
 with sc1:
-    st.markdown('<div class="sel-label">Field Plot</div>', unsafe_allow_html=True)
-    k_idx = st.selectbox("fp", range(len(KYAARIS)),
-                          format_func=lambda i: KYAARIS[i]['label'],
-                          label_visibility="collapsed")
+    st.markdown('<div class="sel-label">Search Kyaari</div>', unsafe_allow_html=True)
+    query = st.text_input("search", placeholder="ID / farmer / district",
+                           label_visibility="collapsed")
+
+# Filter kyaaris
+if query.strip():
+    q = query.strip().lower()
+    filtered = [k for k in KYAARIS_ALL
+                if q in k['id'].lower()
+                or q in k['farmer'].lower()
+                or q in k['dist'].lower()
+                or q in k['village'].lower()]
+else:
+    filtered = KYAARIS_ALL
+
 with sc2:
+    st.markdown('<div class="sel-label">Kyaari</div>', unsafe_allow_html=True)
+    if not filtered:
+        st.warning("No kyaaris match your search.")
+        st.stop()
+    k_sel = st.selectbox(
+        "kyaari", range(len(filtered)),
+        format_func=lambda i: filtered[i]['label'],
+        label_visibility="collapsed",
+    )
+
+kyaari = filtered[k_sel]
+
+with sc3:
     st.markdown('<div class="sel-label">Plantation Model</div>', unsafe_allow_html=True)
-    m_idx = st.selectbox("pm", range(len(MODELS)),
-                          format_func=lambda i: f"M{MODELS[i]['id']} · {MODELS[i]['sub']}",
-                          label_visibility="collapsed")
+    m_sel = st.selectbox(
+        "model", range(len(MODELS)),
+        index=kyaari['default_m'],
+        format_func=lambda i: f"M{MODELS[i]['id']} · {MODELS[i]['sub']}",
+        label_visibility="collapsed",
+    )
 
-kyaari=KYAARIS[k_idx]; model=MODELS[m_idx]
-area_ha=round(_area(kyaari['polygon'])/10000,2)
+model = MODELS[m_sel]
+area_ha = kyaari['area_ha'] or (_area(kyaari['polygon'])/10000)
 
-# Compute positions
-groups=_cached_groups(k_idx,m_idx)
-total=sum(len(g['pts']) for g in groups)
+# ── COMPUTE ───────────────────────────────────────────────────────
+groups = _cached_groups(kyaari['id'], model['id'], kyaari)
+total  = sum(len(g['pts']) for g in groups)
 
-# ── MAP (full width, hero element) ───────────────────────────────
-fm=build_map(k_idx,m_idx,groups)
+# ── MAP ───────────────────────────────────────────────────────────
+fm = build_map(kyaari, model, groups)
 st_folium(fm, height=520, use_container_width=True, returned_objects=[])
 
-# ── SPECIES CARDS ────────────────────────────────────────────────
-st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
-n=len(groups)
-card_cols=st.columns(n+1, gap="small")
+# ── SPECIES CARDS ─────────────────────────────────────────────────
+st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+card_cols = st.columns(len(groups)+1, gap="small")
 
-for i,(col,g) in enumerate(zip(card_cols,groups)):
+for i, (col, g) in enumerate(zip(card_cols, groups)):
     sp=g['sp']; count=len(g['pts'])
     with col:
         st.markdown(f"""
@@ -515,24 +598,32 @@ for i,(col,g) in enumerate(zip(card_cols,groups)):
 with card_cols[-1]:
     st.markdown(f"""
     <div class="total-card">
-      <div class="total-card-label">Total</div>
+      <div class="total-card-label">Total Trees</div>
       <div class="total-card-num">{total}</div>
-      <div class="total-card-sub">trees on map</div>
+      <div class="total-card-sub">{area_ha:.2f} ha plot</div>
     </div>""", unsafe_allow_html=True)
 
-# ── PLOT INFO + MODEL PERFORMANCE ────────────────────────────────
+# ── INFO + PERFORMANCE ────────────────────────────────────────────
 st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
 ic1, ic2 = st.columns([1,1], gap="small")
+
+rs_cls    = STATUS_STYLE.get(kyaari['rs_status'],    'tag-grey')
+ver_cls   = STATUS_STYLE.get(kyaari['verif_status'], 'tag-grey')
+kml_sp    = kyaari['species_str'] or '—'
 
 with ic1:
     st.markdown(f"""
     <div class="info-card">
-      <div class="info-label">Plot Info</div>
+      <div class="info-label">Kyaari Info</div>
       <div class="info-row">
-        <b>{kyaari['dist']}</b><br>
-        {kyaari['farmer']}<br>
-        {area_ha} ha &nbsp;·&nbsp; {kyaari['shape']}<br>
-        ID: {kyaari['id']}
+        <b>ID {kyaari['id']}</b> &nbsp;·&nbsp; {kyaari['village']}, {kyaari['dist']}<br>
+        Farmer: <b>{kyaari['farmer']}</b><br>
+        Area: <b>{area_ha:.2f} ha</b> &nbsp;·&nbsp; {kyaari['total_plants']} plants recorded<br>
+        Species: {kml_sp}
+      </div>
+      <div style="margin-top:8px">
+        <span class="tag {rs_cls}">RS: {kyaari['rs_status'] or '—'}</span>
+        <span class="tag {ver_cls}">Verified: {kyaari['verif_status'] or '—'}</span>
       </div>
     </div>""", unsafe_allow_html=True)
 
@@ -548,7 +639,6 @@ with ic2:
       </div>
     </div>""", unsafe_allow_html=True)
 
-# ── MODEL DESCRIPTION ────────────────────────────────────────────
 st.markdown(f"""
 <div class="model-desc">
   <b>{model['type']}</b> &nbsp;·&nbsp; {model['desc']}
