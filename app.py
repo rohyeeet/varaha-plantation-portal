@@ -459,9 +459,24 @@ def compute_groups(kyaari: dict, model: dict):
         def _tr(p): return [p[0]*cfw-p[1]*sfw, p[0]*sfw+p[1]*cfw]
         def _ti(p): return [p[0]*cbk-p[1]*sbk, p[0]*sbk+p[1]*cbk]
 
+        # Safe zone: subtract Coconut alley strips from block polygon.
+        # Band-checking in original space fails for rotated grids (rotated rows
+        # are diagonal, so only some trees per row fall inside axis-aligned bands).
+        # Shapely difference is geometrically exact for any rotation angle.
+        safe_sh = _shapely(block)
+        for lo,hi in y_bands:
+            safe_sh = safe_sh.difference(SPoly([(-9999,lo),(9999,lo),(9999,hi),(-9999,hi)]))
+        for lo,hi in x_bands:
+            safe_sh = safe_sh.difference(SPoly([(lo,-9999),(hi,-9999),(hi,9999),(lo,9999)]))
+        if safe_sh.is_empty:
+            safe_polys = []
+        elif isinstance(safe_sh, MultiPolygon):
+            safe_polys = [g for g in safe_sh.geoms if not g.is_empty]
+        else:
+            safe_polys = [safe_sh]
+
         bb_r=_bbox([_tr(p) for p in block])
         W_r=bb_r['x1']-bb_r['x0']; H_r=bb_r['y1']-bb_r['y0']
-        # Adjusted spacing (≤15 %) eliminates irregular end-of-row gaps
         nx=max(1,round(W_r/sx)); ny=max(1,round(H_r/sy))
         adj_sx=W_r/nx if abs(W_r/nx-sx)/sx<=0.15 else sx
         adj_sy=H_r/ny if abs(H_r/ny-sy)/sy<=0.15 else sy
@@ -477,7 +492,8 @@ def compute_groups(kyaari: dict, model: dict):
             x=bb_r['x0']+adj_sx/2
             while x<=bb_r['x1']+1e-6:
                 pt=_ti([x,row_y])
-                if not _in_bands(pt[0],x_bands) and not _in_bands(pt[1],y_bands) and _pip(pt,block):
+                p=SPt(pt[0],pt[1])
+                if any(s.contains(p) for s in safe_polys):
                     row_pts.append(pt)
                 x+=adj_sx
             groups[ti]['pts'].extend(row_pts)
@@ -568,7 +584,7 @@ def build_map(kyaari: dict, model: dict, groups: list):
 
 @st.cache_data(show_spinner="Computing tree positions…")
 def _cached_groups(kyaari_id: str, model_id: int, _kyaari: dict):
-    _v = 4  # bump this whenever compute_groups changes to bust stale cache
+    _v = 5  # bump this whenever compute_groups changes to bust stale cache
     model = next(m for m in MODELS if m['id']==model_id)
     return compute_groups(_kyaari, model)
 
