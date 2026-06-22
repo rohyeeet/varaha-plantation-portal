@@ -337,30 +337,32 @@ def _place_alley(block, sx, sy, role, bb, target, num_pairs=None):
     if is_long:
         tpr=max(1,int(H/sx))
         base = num_pairs if num_pairs is not None else max(1,round(target/(2*tpr)))
+        n_col=max(1,round(H/sx)); adj=H/n_col if abs(H/n_col-sx)/sx<=0.15 else sx
         for p in range(base):
             x0=bb['x0']+sy/2+p*sy; x1=bb['x1']-sy/2-p*sy
             if x0>=x1: break
             x_bands.append([x0-sy/2,x0+sy/2])
             if abs(x1-x0)>sy: x_bands.append([x1-sy/2,x1+sy/2])
-            y=bb['y0']+sx/2
-            while y<=bb['y1']:
+            y=bb['y0']+adj/2
+            while y<=bb['y1']+1e-6:
                 if _pip([x0,y],block): pts.append([x0,y])
                 if abs(x1-x0)>sy and _pip([x1,y],block): pts.append([x1,y])
-                y+=sx
+                y+=adj
     else:
         tpr=max(1,int(W/sx))
         raw = num_pairs if num_pairs is not None else max(1,round(target/(2*tpr)))
         npairs=max(3,raw) if role=='alley-3' else raw
+        n_row=max(1,round(W/sx)); adj=W/n_row if abs(W/n_row-sx)/sx<=0.15 else sx
         for p in range(npairs):
             y0=bb['y0']+sy/2+p*sy; y1=bb['y1']-sy/2-p*sy
             if y0>=y1: break
             y_bands.append([y0-sy/2,y0+sy/2])
             if y1-y0>sy: y_bands.append([y1-sy/2,y1+sy/2])
-            x=bb['x0']+sx/2
-            while x<=bb['x1']:
+            x=bb['x0']+adj/2
+            while x<=bb['x1']+1e-6:
                 if _pip([x,y0],block): pts.append([x,y0])
                 if y1-y0>sy and _pip([x,y1],block): pts.append([x,y1])
-                x+=sx
+                x+=adj
     return pts,y_bands,x_bands
 
 def _bresenham_b(R, wa, wb):
@@ -402,19 +404,33 @@ def compute_groups(kyaari: dict, model: dict):
 
     has_zones = any(s['role']=='zone' for s in model['sp'])
     if has_zones:
-        W=bb['x1']-bb['x0']; xc=bb['x0']
+        # Rotate zone grid to align with longest farm edge, then adjust spacing
+        ez=_longest_edge_angle(block)
+        cfwz,sfwz=math.cos(-ez),math.sin(-ez)
+        cbkz,sbkz=math.cos(ez), math.sin(ez)
+        def _trz(p): return [p[0]*cfwz-p[1]*sfwz, p[0]*sfwz+p[1]*cfwz]
+        def _tiz(p): return [p[0]*cbkz-p[1]*sbkz, p[0]*sbkz+p[1]*cbkz]
+        bb_rz=_bbox([_trz(p) for p in block])
+        W_rz=bb_rz['x1']-bb_rz['x0']; H_rz=bb_rz['y1']-bb_rz['y0']
+        xc_rz=bb_rz['x0']
         for s in model['sp']:
             if s['role']!='zone': continue
-            i=model['sp'].index(s); xe=xc+W*s['zs']
+            i=model['sp'].index(s); xe_rz=xc_rz+W_rz*s['zs']
+            W_z=xe_rz-xc_rz
+            nx=max(1,round(W_z/s['sx'])); ny=max(1,round(H_rz/s['sy']))
+            asx=W_z/nx if abs(W_z/nx-s['sx'])/s['sx']<=0.15 else s['sx']
+            asy=H_rz/ny if abs(H_rz/ny-s['sy'])/s['sy']<=0.15 else s['sy']
             pts=[]
-            y=bb['y0']+s['sy']/2
-            while y<=bb['y1']:
-                x=bb['x0']+s['sx']/2
-                while x<=bb['x1']:
-                    if xc-1e-6<=x<xe-1e-6 and _pip([x,y],block): pts.append([x,y])
-                    x+=s['sx']
-                y+=s['sy']
-            groups[i]['pts']=pts; xc=xe
+            y=bb_rz['y0']+asy/2
+            while y<=bb_rz['y1']+1e-6:
+                x=xc_rz+asx/2
+                while x<=bb_rz['x1']+1e-6:
+                    if xc_rz-1e-6<=x<xe_rz-1e-6:
+                        pt=_tiz([x,y])
+                        if _pip(pt,block): pts.append(pt)
+                    x+=asx
+                y+=asy
+            groups[i]['pts']=pts; xc_rz=xe_rz
         return groups
 
     # Coconut alley: use Atul's perpendicular-side row-count formula
@@ -444,20 +460,26 @@ def compute_groups(kyaari: dict, model: dict):
         def _ti(p): return [p[0]*cbk-p[1]*sbk, p[0]*sbk+p[1]*cbk]
 
         bb_r=_bbox([_tr(p) for p in block])
-        all_y=[]; y=bb_r['y0']+sy/2
-        while y<=bb_r['y1']:
-            all_y.append(y); y+=sy
+        W_r=bb_r['x1']-bb_r['x0']; H_r=bb_r['y1']-bb_r['y0']
+        # Adjusted spacing (≤15 %) eliminates irregular end-of-row gaps
+        nx=max(1,round(W_r/sx)); ny=max(1,round(H_r/sy))
+        adj_sx=W_r/nx if abs(W_r/nx-sx)/sx<=0.15 else sx
+        adj_sy=H_r/ny if abs(H_r/ny-sy)/sy<=0.15 else sy
+
+        all_y=[]; y=bb_r['y0']+adj_sy/2
+        while y<=bb_r['y1']+1e-6:
+            all_y.append(y); y+=adj_sy
 
         b_rows=_bresenham_b(len(all_y),wa,wb_)
         for ri,row_y in enumerate(all_y):
             ti=ib if (ri in b_rows and ib>=0) else ia
             row_pts=[]
-            x=bb_r['x0']+sx/2
-            while x<=bb_r['x1']:
+            x=bb_r['x0']+adj_sx/2
+            while x<=bb_r['x1']+1e-6:
                 pt=_ti([x,row_y])
                 if not _in_bands(pt[0],x_bands) and not _in_bands(pt[1],y_bands) and _pip(pt,block):
                     row_pts.append(pt)
-                x+=sx
+                x+=adj_sx
             groups[ti]['pts'].extend(row_pts)
             if row_pts: groups[ti]['rows'].append(len(row_pts))
     return groups
@@ -500,14 +522,21 @@ def build_map(kyaari: dict, model: dict, groups: list):
         fill_color='#27AE60', fill_opacity=0.06,
     ).add_to(fm)
 
-    # Zone dividers (M9, M12)
+    # Zone dividers (M9, M12) — rotated to match farm orientation
     if any(s['role']=='zone' for s in model['sp']):
-        bloc=_safe_inset(kyaari['polygon'],1); bb2=_bbox(bloc)
-        W=bb2['x1']-bb2['x0']; xc=bb2['x0']
+        bloc=_safe_inset(kyaari['polygon'],1)
+        ez2=_longest_edge_angle(bloc)
+        cfwz2,sfwz2=math.cos(-ez2),math.sin(-ez2)
+        cbkz2,sbkz2=math.cos(ez2), math.sin(ez2)
+        def _trdiv(p): return [p[0]*cfwz2-p[1]*sfwz2, p[0]*sfwz2+p[1]*cfwz2]
+        def _tidiv(p): return [p[0]*cbkz2-p[1]*sbkz2, p[0]*sbkz2+p[1]*cbkz2]
+        bb_d=_bbox([_trdiv(p) for p in bloc])
+        W_d=bb_d['x1']-bb_d['x0']; xc_d=bb_d['x0']
         for s in [z for z in model['sp'] if z['role']=='zone'][:-1]:
-            xc+=W*s['zs']
+            xc_d+=W_d*s['zs']
+            p1=_tidiv([xc_d,bb_d['y0']]); p2=_tidiv([xc_d,bb_d['y1']])
             folium.PolyLine(
-                [_m2ll([xc,bb2['y0']],anchor),_m2ll([xc,bb2['y1']],anchor)],
+                [_m2ll(p1,anchor),_m2ll(p2,anchor)],
                 color='white',weight=1.5,dash_array='6,4',opacity=0.65,
             ).add_to(fm)
 
@@ -539,6 +568,7 @@ def build_map(kyaari: dict, model: dict, groups: list):
 
 @st.cache_data(show_spinner="Computing tree positions…")
 def _cached_groups(kyaari_id: str, model_id: int, _kyaari: dict):
+    _v = 4  # bump this whenever compute_groups changes to bust stale cache
     model = next(m for m in MODELS if m['id']==model_id)
     return compute_groups(_kyaari, model)
 
@@ -639,7 +669,7 @@ with card_cols[-1]:
     </div>""", unsafe_allow_html=True)
 
 # ── ROW BREAKDOWN (shown when block rows ≥ 7 — Atul Step 5a) ─────
-block_groups = [g for g in groups if g['sp']['role'] in ('block-a','block-b') and g['rows']]
+block_groups = [g for g in groups if g['sp']['role'] in ('block-a','block-b') and g.get('rows')]
 if block_groups and max(len(g['rows']) for g in block_groups) >= 7:
     st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
     rows_html = '<div class="info-card"><div class="info-label">Row Breakdown</div><div style="display:flex;gap:20px;flex-wrap:wrap">'
