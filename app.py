@@ -78,7 +78,7 @@ MODELS = [
      "sp":[
         {"name":"Red Sanders","col":"#C0392B","spacing":"3 m","perHa":130,"role":"boundary","sal":3},
         {"name":"Mango","col":"#E8940A","spacing":"6×6 m","perHa":184,"role":"block-a","sx":6,"sy":6,"aw":3},
-        {"name":"Coconut","col":"#2E86C1","spacing":"9×5 m","perHa":42.22,"role":"alley","sx":5,"sy":9},
+        {"name":"Coconut","col":"#2E86C1","spacing":"9×5 m","perHa":42.22,"role":"alley","sx":9,"sy":5},
      ]},
     {"id":2,"name":"Model 2","sub":"Mango · Red Sanders · Coconut (Long-edge)",
      "type":"Boundary + Alley Block","size":">0.8 ha","credit":7.508,"totalPerHa":356.22,
@@ -86,7 +86,7 @@ MODELS = [
      "sp":[
         {"name":"Red Sanders","col":"#C0392B","spacing":"3 m","perHa":130,"role":"boundary","sal":3},
         {"name":"Mango","col":"#E8940A","spacing":"6×6 m","perHa":184,"role":"block-a","sx":6,"sy":6,"aw":3},
-        {"name":"Coconut","col":"#2E86C1","spacing":"9×5 m","perHa":42.22,"role":"alley-long","sx":5,"sy":9},
+        {"name":"Coconut","col":"#2E86C1","spacing":"9×5 m","perHa":42.22,"role":"alley-long","sx":9,"sy":5},
      ]},
     {"id":3,"name":"Model 3","sub":"Mango · Cashew · Teak",
      "type":"Boundary + Equal Block","size":"≤0.8 ha","credit":5.809,"totalPerHa":365.11,
@@ -148,7 +148,7 @@ MODELS = [
      "type":"Coconut Edge + 3:1 Block","size":">0.8 ha","credit":7.424,"totalPerHa":354.62,
      "desc":"Coconut top/bottom alley rows at 9×5 m. Jackfruit 3:1 over Jamun fills block at 5×5 m.",
      "sp":[
-        {"name":"Coconut","col":"#2E86C1","spacing":"9×5 m","perHa":41.78,"role":"alley","sx":5,"sy":9},
+        {"name":"Coconut","col":"#2E86C1","spacing":"9×5 m","perHa":41.78,"role":"alley","sx":9,"sy":5},
         {"name":"Jackfruit","col":"#1E8449","spacing":"5×5 m","perHa":218.04,"role":"block-a","sx":5,"sy":5,"aw":3},
         {"name":"Jamun","col":"#6C3483","spacing":"5×5 m","perHa":94.8,"role":"block-b","sx":5,"sy":5,"aw":1},
      ]},
@@ -156,7 +156,7 @@ MODELS = [
      "type":"Coconut Edge + 2:1 Block","size":">0.8 ha","credit":7.424,"totalPerHa":354.62,
      "desc":"Coconut top/bottom alley rows at 9×5 m. Jackfruit 2:1 over Sapota fills block at 5×5 m.",
      "sp":[
-        {"name":"Coconut","col":"#2E86C1","spacing":"9×5 m","perHa":41.78,"role":"alley","sx":5,"sy":9},
+        {"name":"Coconut","col":"#2E86C1","spacing":"9×5 m","perHa":41.78,"role":"alley","sx":9,"sy":5},
         {"name":"Jackfruit","col":"#1E8449","spacing":"5×5 m","perHa":208.56,"role":"block-a","sx":5,"sy":5,"aw":2},
         {"name":"Sapota","col":"#8E44AD","spacing":"5×5 m","perHa":104.28,"role":"block-b","sx":5,"sy":5,"aw":1},
      ]},
@@ -172,7 +172,7 @@ MODELS = [
      "type":"Coconut Edge + Equal Block","size":">0.8 ha","credit":7.424,"totalPerHa":335.91,
      "desc":"Coconut along three sides at 9×5 m. Jackfruit and Citrus in equal 50/50 rows at 5×5 m.",
      "sp":[
-        {"name":"Coconut","col":"#2E86C1","spacing":"9×5 m","perHa":62.67,"role":"alley-3","sx":5,"sy":9},
+        {"name":"Coconut","col":"#2E86C1","spacing":"9×5 m","perHa":62.67,"role":"alley-3","sx":9,"sy":5},
         {"name":"Jackfruit","col":"#1E8449","spacing":"5×5 m","perHa":136.62,"role":"block-a","sx":5,"sy":5,"aw":1},
         {"name":"Citrus","col":"#5D8A00","spacing":"5×5 m","perHa":136.62,"role":"block-b","sx":5,"sy":5,"aw":1},
      ]},
@@ -329,14 +329,14 @@ def _walk_boundary_targeted(coords, target):
 def _in_bands(v, bands):
     return any(lo<=v<=hi for lo,hi in bands)
 
-def _place_alley(block, sx, sy, role, bb, target):
+def _place_alley(block, sx, sy, role, bb, target, num_pairs=None):
     pts=[]; y_bands=[]; x_bands=[]
     W=bb['x1']-bb['x0']; H=bb['y1']-bb['y0']
     is_long=(role=='alley-long') or (W<H)
 
     if is_long:
         tpr=max(1,int(H/sx))
-        base=max(1,round(target/(2*tpr)))
+        base = num_pairs if num_pairs is not None else max(1,round(target/(2*tpr)))
         for p in range(base):
             x0=bb['x0']+sy/2+p*sy; x1=bb['x1']-sy/2-p*sy
             if x0>=x1: break
@@ -349,8 +349,8 @@ def _place_alley(block, sx, sy, role, bb, target):
                 y+=sx
     else:
         tpr=max(1,int(W/sx))
-        base=max(1,round(target/(2*tpr)))
-        npairs=max(3,base) if role=='alley-3' else base
+        raw = num_pairs if num_pairs is not None else max(1,round(target/(2*tpr)))
+        npairs=max(3,raw) if role=='alley-3' else raw
         for p in range(npairs):
             y0=bb['y0']+sy/2+p*sy; y1=bb['y1']-sy/2-p*sy
             if y0>=y1: break
@@ -370,6 +370,23 @@ def _bresenham_b(R, wa, wb):
     step=R/nB
     return {int(k*step+step/2) for k in range(nB)}
 
+def _longest_edge_angle(coords):
+    """Angle (radians) of the longest edge in the polygon — used to orient block grid rows."""
+    best_sq, best_a = 0.0, 0.0
+    n = len(coords)
+    for i in range(n):
+        p1, p2 = coords[i], coords[(i+1)%n]
+        dx, dy = p2[0]-p1[0], p2[1]-p1[1]
+        sq = dx*dx + dy*dy
+        if sq > best_sq:
+            best_sq, best_a = sq, math.atan2(dy, dx)
+    return best_a
+
+def _atul_row_pairs(perp_m):
+    """Atul's coconut row-count rule: perpendicular side length (m) → number of row pairs per side.
+    <75m→1, 75–125m→2, 125–175m→3, 175–225m→4, …"""
+    return max(1, int((perp_m + 25) / 50))
+
 def compute_groups(kyaari: dict, model: dict):
     poly    = kyaari['polygon']
     area_ha = kyaari.get('area_ha') or (_area(poly)/10000)
@@ -377,7 +394,7 @@ def compute_groups(kyaari: dict, model: dict):
     has_boundary = any(s['role']=='boundary' for s in model['sp'])
     block        = _safe_inset(poly,5) if has_boundary else inner
     bb      = _bbox(block)
-    groups  = [{'sp':s,'pts':[]} for s in model['sp']]
+    groups  = [{'sp':s,'pts':[],'rows':[]} for s in model['sp']]
 
     for i,s in enumerate(model['sp']):
         if s['role']=='boundary':
@@ -400,32 +417,49 @@ def compute_groups(kyaari: dict, model: dict):
             groups[i]['pts']=pts; xc=xe
         return groups
 
+    # Coconut alley: use Atul's perpendicular-side row-count formula
     y_bands=[]; x_bands=[]
     for s in model['sp']:
         if not s['role'].startswith('alley'): continue
         i=model['sp'].index(s)
-        pts,yb,xb=_place_alley(block,s['sx'],s['sy'],s['role'],bb,round(area_ha*s['perHa']))
+        W_b=bb['x1']-bb['x0']; H_b=bb['y1']-bb['y0']
+        is_long_s=(s['role']=='alley-long') or (W_b<H_b)
+        perp = W_b if is_long_s else H_b
+        num_p = _atul_row_pairs(perp) if s['role'] in ('alley','alley-long') else None
+        pts,yb,xb=_place_alley(block,s['sx'],s['sy'],s['role'],bb,round(area_ha*s['perHa']),num_p)
         groups[i]['pts']=pts; y_bands.extend(yb); x_bands.extend(xb)
 
+    # Block grid: rotated to align rows with the longest edge of the block polygon (Atul Step 3)
     sa=next((s for s in model['sp'] if s['role']=='block-a'),None)
     sb=next((s for s in model['sp'] if s['role']=='block-b'),None)
     if sa:
         ia=model['sp'].index(sa); ib=model['sp'].index(sb) if sb else -1
-        wa=sa.get('aw',1); wb=sb.get('aw',1) if sb else 0
+        wa=sa.get('aw',1); wb_=sb.get('aw',1) if sb else 0
         sx,sy=sa['sx'],sa['sy']
-        all_y=[]
-        y=bb['y0']+sy/2
-        while y<=bb['y1']:
-            if not _in_bands(y,y_bands): all_y.append(y)
-            y+=sy
-        b_rows=_bresenham_b(len(all_y),wa,wb)
+
+        ea = _longest_edge_angle(block)
+        cfw,sfw = math.cos(-ea), math.sin(-ea)   # original → rotated
+        cbk,sbk = math.cos(ea),  math.sin(ea)    # rotated  → original
+        def _tr(p): return [p[0]*cfw-p[1]*sfw, p[0]*sfw+p[1]*cfw]
+        def _ti(p): return [p[0]*cbk-p[1]*sbk, p[0]*sbk+p[1]*cbk]
+
+        bb_r=_bbox([_tr(p) for p in block])
+        all_y=[]; y=bb_r['y0']+sy/2
+        while y<=bb_r['y1']:
+            all_y.append(y); y+=sy
+
+        b_rows=_bresenham_b(len(all_y),wa,wb_)
         for ri,row_y in enumerate(all_y):
             ti=ib if (ri in b_rows and ib>=0) else ia
-            x=bb['x0']+sx/2
-            while x<=bb['x1']:
-                if not _in_bands(x,x_bands) and _pip([x,row_y],block):
-                    groups[ti]['pts'].append([x,row_y])
+            row_pts=[]
+            x=bb_r['x0']+sx/2
+            while x<=bb_r['x1']:
+                pt=_ti([x,row_y])
+                if not _in_bands(pt[0],x_bands) and not _in_bands(pt[1],y_bands) and _pip(pt,block):
+                    row_pts.append(pt)
                 x+=sx
+            groups[ti]['pts'].extend(row_pts)
+            if row_pts: groups[ti]['rows'].append(len(row_pts))
     return groups
 
 # ─── GEO UTILS ────────────────────────────────────────────────────
@@ -603,6 +637,27 @@ with card_cols[-1]:
       <div class="total-card-num">{total}</div>
       <div class="total-card-sub">{area_ha:.2f} ha plot</div>
     </div>""", unsafe_allow_html=True)
+
+# ── ROW BREAKDOWN (shown when block rows ≥ 7 — Atul Step 5a) ─────
+block_groups = [g for g in groups if g['sp']['role'] in ('block-a','block-b') and g['rows']]
+if block_groups and max(len(g['rows']) for g in block_groups) >= 7:
+    st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+    rows_html = '<div class="info-card"><div class="info-label">Row Breakdown</div><div style="display:flex;gap:20px;flex-wrap:wrap">'
+    for g in block_groups:
+        sp=g['sp']
+        row_lines = ''.join(
+            f'<span style="display:inline-block;min-width:56px;font-size:11px;color:#2A3A28">'
+            f'Row {ri+1}: <b>{cnt}</b></span>'
+            for ri,cnt in enumerate(g['rows'])
+        )
+        rows_html += (
+            f'<div><div style="font-size:10px;font-weight:700;color:{sp["col"]};'
+            f'text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">'
+            f'{sp["name"]} — {len(g["rows"])} rows</div>'
+            f'<div style="line-height:1.8">{row_lines}</div></div>'
+        )
+    rows_html += '</div></div>'
+    st.markdown(rows_html, unsafe_allow_html=True)
 
 # ── INFO + PERFORMANCE ────────────────────────────────────────────
 st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
