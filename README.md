@@ -37,6 +37,8 @@ This portal replaces manual estimation (spreadsheets + mental geometry) with a l
 
 ## Plantation Models
 
+<img width="1454" height="917" alt="image" src="https://github.com/user-attachments/assets/ae6c5d07-16bd-4bf5-ab4f-5078c6858913" />
+
 All 13 models are derived from the South India Multispecies Plantation specification (*South India Multispecies Models — For ULU.xlsx* and *3 species designs South India*). Spacings and densities are calibrated directly against those documents.
 
 ### Model Reference
@@ -74,6 +76,8 @@ All 13 models are derived from the South India Multispecies Plantation specifica
 ---
 
 ## Placement Algorithm
+
+<img width="1458" height="919" alt="image" src="https://github.com/user-attachments/assets/b548e181-851e-4fa7-b596-70e8e7a1ba3a" />
 
 The algorithm works entirely in **relative metre coordinates** anchored at the polygon centroid, then converts back to lat/lng for display. All polygon operations use **Shapely**.
 
@@ -113,6 +117,8 @@ walk perimeter at spacing → one dot per step
 Spacing is calibrated to hit the target count exactly, regardless of perimeter length. The placed count matches `area × 130` within ±1 tree.
 
 ### Step 4 — Alley Species (Coconut — M1, M2, M10, M11, M13)
+
+<img width="1467" height="919" alt="image" src="https://github.com/user-attachments/assets/0bc049fd-cfe8-4e04-adc3-ef1eee494a95" />
 
 Coconut is placed in parallel rows (`alley`) or columns (`alley-long` / `alley-3`).
 
